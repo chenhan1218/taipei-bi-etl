@@ -5,6 +5,7 @@ import numpy as np
 SOURCES = {
     "google_search_rps": {
         "type": "gcs",
+        "cache_file": True,
         "bucket": "moz-fx-data",
         "prefix": "taipei/",
         "path": "staging-rps-google_search_rps/",
@@ -29,6 +30,20 @@ SOURCES = {
     },
     "google_search": {
         "type": "bq",
+        "cache_file": True,
+        "file_format": "jsonl",
+        "project": "moz-fx-prod",
+        "dataset": "telemetry",
+        "table": "focus_event",
+        "udf_js": ["json_extract_events"],
+        "query": "revenue_search_events",
+        "load": True,
+        "date_format": "%Y-%m-%d",
+    },
+    "google_search_local": {
+        "type": "bq",
+        "cache_file": True,
+        "file_format": "jsonl",
         "project": "moz-fx-prod",
         "dataset": "telemetry",
         "table": "focus_event",
@@ -57,7 +72,7 @@ SCHEMA = [
 DESTINATIONS = {
     "gcs": {"bucket": "moz-fx-data", "prefix": "taipei/"},
     "fs": {
-        "prefix": "./data/",
+        "prefix": "test-data/",
         "file_format": "jsonl",
         "date_field": "utc_datetime",
     },
