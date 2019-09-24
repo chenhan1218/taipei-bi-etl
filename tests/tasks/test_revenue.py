@@ -9,8 +9,9 @@ import requests
 from google.cloud import storage
 from google.cloud.storage import Bucket
 from pandas import DataFrame
+import pandas
 
-import utils.common
+import utils
 from tasks import revenue
 from tests.utils import inject_fixtures
 from utils.config import DEFAULT_DATETIME_FORMAT, get_configs
@@ -61,10 +62,9 @@ def test_write_gcs(gcs_bucket: Bucket, gcs_dest: Dict[str, Any]):
 
 @pytest.mark.unittest
 def test_revenue_google_search_extract_via_bq(mock_pdbq):
-    queryResult = utils.common.cachedDataFrame(
-        "test-data/raw-revenue-google_search/2019-09-08.1.jsonl",
-        {"file_format": "jsonl"},
-    )
+    fpath = "test-data/raw-revenue-google_search/2019-09-08.1.jsonl"
+    with open(fpath, "r") as f:
+        queryResult = utils.marshalling.convert_df(f.read(), {"file_format": "jsonl"})
     mock_pdbq.setResult(queryResult)
     args = Namespace(
         config="test",
@@ -86,10 +86,10 @@ def test_revenue_google_search_extract_via_bq(mock_pdbq):
 
 @pytest.mark.unittest
 def test_revenue_google_search_extract(mock_pdbq):
-    queryResult = utils.common.cachedDataFrame(
-        "test-data/raw-revenue-google_search/2019-09-08.1.jsonl",
-        {"file_format": "jsonl"},
-    )
+    fpath = "test-data/raw-revenue-google_search/2019-09-08.1.jsonl"
+    with open(fpath, "r") as f:
+        queryResult = utils.marshalling.convert_df(f.read(), {"file_format": "jsonl"})
+
     mock_pdbq.setResult(queryResult)
     args = Namespace(
         config="test",
@@ -176,3 +176,31 @@ def test_revenue_load(mock_io, revenue_sample_data):
         DEFAULT_DATETIME_FORMAT
     )
     assert data == convert_format(cfg.DESTINATIONS["fs"]["file_format"], expected)
+
+
+@pytest.mark.unittest
+def test_revenue_google_search_transform(mock_pdbq):
+    with open("test-data/staging-rps-google_search_rps/2018-01-01.csv", "r") as f:
+        googleSearchRPS = utils.marshalling.convert_df(f.read(), {"file_format": "csv"})
+    with open("test-data/raw-revenue-google_search/2019-09-08.1.jsonl", "r") as f:
+        googleSearchRevenue = utils.marshalling.convert_df(
+            f.read(), {"file_format": "jsonl"}
+        )
+
+    with open("test-data/staging-revenue-google_search/2019-09-06.jsonl", "r") as f:
+        expectedResult = utils.marshalling.convert_df(
+            f.read(), {"file_format": "jsonl"}
+        )
+
+    args = Namespace(date=datetime.datetime(2019, 9, 8, 0, 0), period=30, rm=False)
+    kargs = {"google_search": googleSearchRevenue, "google_search_rps": googleSearchRPS}
+    task = revenue.RevenueEtlTask(args, cfg.SOURCES, cfg.SCHEMA, cfg.DESTINATIONS)
+    df = task.transform_google_search(**kargs)
+
+    # TODO: improve dataframe type
+    expectedResult["utc_datetime"] = expectedResult["utc_datetime"].astype(
+        "datetime64[ns]"
+    )
+    pandas.testing.assert_frame_equal(
+        df.sort_index(axis=1), expectedResult.sort_index(axis=1), check_dtype=False
+    )
