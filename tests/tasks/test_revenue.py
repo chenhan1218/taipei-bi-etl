@@ -198,9 +198,43 @@ def test_revenue_google_search_transform(mock_pdbq):
     df = task.transform_google_search(**kargs)
 
     # TODO: improve dataframe type
+    log.warning(df.astype(object).sort_index(axis=1)["utc_datetime"])
+    log.warning(expectedResult.sort_index(axis=1)["utc_datetime"])
+    a = df.astype(object).sort_index(axis=1)
+    b = expectedResult.astype(object).sort_index(axis=1)
+    log.warning(a)
+    log.warning(b)
+    pandas.testing.assert_frame_equal(a, b, check_dtype=False)
     expectedResult["utc_datetime"] = expectedResult["utc_datetime"].astype(
         "datetime64[ns]"
     )
     pandas.testing.assert_frame_equal(
         df.sort_index(axis=1), expectedResult.sort_index(axis=1), check_dtype=False
     )
+
+
+"""
+@pytest.mark.unittest
+def test_revenue_google_search_extract_via_fs():
+    fpath = "test-data/raw-revenue-google_search/2019-09-08.1.jsonl"
+    with open(fpath, "r") as f:
+        queryResult = utils.marshalling.convert_df(f.read(), {"file_format": "jsonl"})
+    args = Namespace(
+        config="test",
+        date=datetime.datetime(2019, 9, 8, 0, 0),
+        debug=True,
+        dest="fs",
+        loglevel=None,
+        period=30,
+        rm=False,
+        source="google_search",
+        step="e",
+        task="revenue",
+    )
+    task = revenue.RevenueEtlTask(args, cfg.SOURCES, cfg.SCHEMA, cfg.DESTINATIONS)
+    df = task.extract_via_fs("google_search", cfg.SOURCES["google_search"])
+    print(df)
+    assert isinstance(df, DataFrame)
+    assert df.equals(queryResult)
+"""
+
