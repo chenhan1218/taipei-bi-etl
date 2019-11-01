@@ -36,3 +36,29 @@ DESTINATIONS = {
         "date_field": "execution_date",
     }
 }
+
+testing = {
+    "wrong-api-key": {
+        "SOURCES": {
+            "adjust_trackers": {
+                "type": "api",
+                "url": "https://api.adjust.com/kpis/v1/abc.json&user_token=WRONG&end_date={end_date}",
+                "request_interval": 1,
+                "api_key": "WRONG",
+                "json_path_nested": [
+                    "result_set.networks",
+                    "campaigns",
+                    "adgroups",
+                    "creatives",
+                ],
+                "fields": ["name", "token"],
+                "cache_file": False,
+                "date_format": "%Y-%m-%d",
+                "file_format": "json",
+                "load": True,
+            }
+        },
+        "SCHEMA": SCHEMA,
+        "DESTINATIONS": DESTINATIONS,
+    }
+}
