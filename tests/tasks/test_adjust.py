@@ -29,6 +29,11 @@ def load_assets(mock_requests):
         mock_requests.setContent(URL, CONTENT)
 
 
+@pytest.fixture
+def adjust_api_key(monkeypatch):
+    monkeypatch.setenv("ADJUST_API_KEY", "KEY", prepend=False)
+
+
 @pytest.mark.unittest
 def test_adjust_extract(load_assets):
     args = Namespace(
@@ -51,6 +56,46 @@ def test_adjust_extract(load_assets):
     log.debug("shape of df: %s" % str(df.shape))
     assert isinstance(df, DataFrame)
     assert len(df.index) != 0
+
+
+@pytest.mark.unittest
+def test_adjust_extract_with_wrong_api_key(load_assets):
+    args = Namespace(
+        config="test",
+        date=datetime.datetime(2019, 9, 26, 0, 0),
+        debug=True,
+        rm=False,
+        source="adjust_trackers",
+        # loglevel=None,
+        period=30,
+        step="e",
+        task="adjust",
+        dest=None,
+    )
+
+    SOURCES = {
+        "adjust_trackers": {
+            "type": "api",
+            "url": "https://api.adjust.com/kpis/v1/abc.json&user_token=WRONG&end_date={end_date}",
+            "request_interval": 1,
+            "api_key": "WRONG",
+            "json_path_nested": [
+                "result_set.networks",
+                "campaigns",
+                "adgroups",
+                "creatives",
+            ],
+            "fields": ["name", "token"],
+            "cache_file": False,
+            "date_format": "%Y-%m-%d",
+            "file_format": "json",
+            "load": True,
+        }
+    }
+
+    task = tasks.adjust.AdjustEtlTask(args, SOURCES, cfg.SCHEMA, cfg.DESTINATIONS)
+    task.extract()
+    assert 0
 
 
 @pytest.mark.unittest
